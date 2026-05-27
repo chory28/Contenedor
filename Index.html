@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Transferencia de Contenedor</title>
+    <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;900&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        
+        body { 
+            background: #0f1117; 
+            display: flex; 
+            align-items: flex-start; /* Mejor para scroll en celulares cortos */
+            justify-content: center; 
+            min-height: 100vh; 
+            font-family: 'Barlow', sans-serif; 
+            padding: 12px; /* Menos espacio en las esquinas en móvil */
+        }
+        
+        .card { 
+            background: #181c27; 
+            border: 2px solid #2a2f3e; 
+            border-top: 4px solid #f5a623; 
+            border-radius: 8px; /* Bordes ligeramente más suaves */
+            width: 100%; 
+            max-width: 520px; 
+            overflow: hidden; 
+            box-shadow: 0 20px 60px rgba(0,0,0,0.6); 
+            position: relative; 
+            margin-bottom: 20px;
+        }
+        
+        .header { background: #1e2333; padding: 16px 20px; display: flex; align-items: center; gap: 14px; border-bottom: 1px solid #2a2f3e; }
+        .header-icon { width: 40px; height: 40px; background: #f5a623; border-radius: 4px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+        .header-icon svg { width: 22px; height: 22px; fill: #0f1117; }
+        .header-text h1 { font-family: 'Barlow Condensed', sans-serif; font-size: 20px; font-weight: 900; color: #fff; letter-spacing: 0.5px; text-transform: uppercase; }
+        .header-text p { font-size: 11px; color: #6b7280; margin-top: 2px; }
+        
+        .body { padding: 20px; display: flex; flex-direction: column; gap: 0; }
+        .section-label { font-family: 'Barlow Condensed', sans-serif; font-size: 12px; font-weight: 700; letter-spacing: 2px; color: #f5a623; text-transform: uppercase; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
+        .section-label::after { content:''; flex:1; height:1px; background:#2a2f3e; }
+        
+        .field { margin-bottom: 16px; }
+        label { display: block; font-size: 11px; font-weight: 600; color: #9ca3af; margin-bottom: 6px; letter-spacing: 0.4px; text-transform: uppercase; }
+        
+        /* IMPORTANTE: 16px de font-size evita el zoom automático molesto en iOS al enfocar */
+        input[type="text"], input[type="number"], input[type="date"], textarea { 
+            width: 100%; 
+            background: #0f1117; 
+            border: 1px solid #2a2f3e; 
+            border-radius: 4px; 
+            padding: 12px 14px; 
+            color: #f1f5f9; 
+            font-family: 'Barlow', sans-serif; 
+            font-size: 16px; 
+            transition: border-color .2s, box-shadow .2s; 
+            outline: none; 
+            -webkit-appearance: none; /* Quita estilos nativos raros en móvil */
+        }
+        input:focus, textarea:focus { border-color: #f5a623; box-shadow: 0 0 0 3px rgba(245,166,35,.12); }
+        input::placeholder, textarea::placeholder { color: #3d4559; }
+        textarea { resize: vertical; min-height: 80px; }
+        
+        .numbers-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+        
+        .summary { background: #0f1117; border: 1px solid #2a2f3e; border-left: 3px solid #f5a623; border-radius: 4px; padding: 14px; margin-top: 4px; margin-bottom: 16px; display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+        .stat { text-align: center; }
+        .stat-value { font-family: 'Barlow Condensed', sans-serif; font-size: 24px; font-weight: 900; color: #f5a623; line-height: 1; }
+        .stat-label { font-size: 9px; color: #6b7280; text-transform: uppercase; letter-spacing: .5px; margin-top: 4px; }
+        .stat-diff { border-left: 1px solid #2a2f3e; border-right: 1px solid #2a2f3e; }
+        .stat-diff .stat-value { color: #34d399; }
+        .stat-diff.negative .stat-value { color: #f87171; }
+        
+        .divider { height: 1px; background: #2a2f3e; margin: 4px 0 16px; }
+        
+        /* Botones optimizados para dedos en pantallas táctiles */
+        .footer { display: flex; gap: 10px; padding: 0 20px 16px; flex-direction: column; } /* En fila vertical para mejor acceso */
+        .action-buttons { display: flex; gap: 10px; width: 100%; }
+        
+        .btn {
+            font-family: 'Barlow Condensed', sans-serif;
+            font-weight: 900;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            height: 48px; /* Altura ideal recomendada para móviles */
+            border-radius: 4px;
+            font-size: 14px;
+            transition: background .2s, transform .1s;
+            border: none;
+        }
+        .btn:active { transform: scale(.98); }
+        
+        .btn-clear { background: transparent; border: 1px solid #2a2f3e; color: #6b7280; width: 100%; }
+        .btn-excel { background: #1d6f42; color: #fff; flex: 1; }
+        .btn-pdf { background: #b91c1c; color: #fff; flex: 1; }
+        
+        .tagline { text-align: center; font-size: 10px; color: #2a2f3e; letter-spacing: 1px; padding-bottom: 14px; text-transform: uppercase; }
+        
+        @media print {
+            body { background: #fff !important; padding: 0; }
+            .card { box-shadow: none; border: 1px solid #ccc; max-width: 100%; width: 100%; background: #fff !important; color: #000 !important; }
+            .header { background: #f5a623 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+            .header-text h1, .header-text p { color: #000 !important; }
+            .header-icon { display: none; }
+            .body { background: #fff !important; }
+            label { color: #555 !important; }
+            input, textarea { background: #fff !important; border: 1px solid #bbb !important; color: #000 !important; -webkit-print-color-adjust: exact; font-size: 14px; }
+            .summary { background: #f9f9f9 !important; border-left: 3px solid #f5a623 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+            .stat-value { color: #b45309 !important; }
+            .stat-diff .stat-value { color: #15803d !important; }
+            .stat-diff.negative .stat-value { color: #dc2626 !important; }
+            .section-label { color: #b45309 !important; }
+            .footer, .tagline { display: none !important; }
+        }
+    </style>
+</head>
+<body>
+<div class="card">
+    <div class="header">
+        <div class="header-icon">
+            <svg viewBox="0 0 24 24"><path d="M20 7H4C2.9 7 2 7.9 2 9v11c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V9c0-1.1-.9-2-2-2zm0 12H4V9h16v10zM7 4h10v2H7zM9 1h6v2H9z"/></svg>
+        </div>
+        <div class="header-text">
+            <h1>Transferencia de Contenedor</h1>
+            <p>Registro de carga / descarga</p>
+        </div>
+    </div>
+    <div class="body">
+        <div class="section-label">Identificación</div>
+        <div class="field">
+            <label>Contenedor de Origen</label>
+            <input type="text" id="origen" placeholder="Ej. MSCU 123456-7" oninput="updateSummary()">
+        </div>
+        <div class="numbers-row">
+            <div class="field">
+                <label>Fecha</label>
+                <input type="date" id="fecha">
+            </div>
+            <div class="field">
+                <label>Contenedor Destino</label>
+                <input type="text" id="destino" placeholder="Ej. HLCU 987654-3" oninput="updateSummary()">
+            </div>
+        </div>
+        <div class="divider"></div>
+        <div class="section-label">Movimiento de Cajas</div>
+        <div class="numbers-row">
+            <div class="field">
+                <label>Cajas de origen</label>
+                <input type="number" id="total" min="0" inputmode="numeric" placeholder="0" oninput="updateSummary()">
+            </div>
+            <div class="field">
+                <label>Se descargaron</label>
+                <input type="number" id="descargadas" min="0" inputmode="numeric" placeholder="0" oninput="updateSummary()">
+            </div>
+        </div>
+        <div class="field">
+            <label>Se cargaron a otro contenedor</label>
+            <input type="number" id="cargadas" min="0" inputmode="numeric" placeholder="0" oninput="updateSummary()">
+        </div>
+        <div class="divider"></div>
+        <div class="section-label">Resumen</div>
+        <div class="summary">
+            <div class="stat">
+                <div class="stat-value" id="s-total">—</div>
+                <div class="stat-label">Cajas origen</div>
+            </div>
+            <div class="stat stat-diff" id="diff-block">
+                <div class="stat-value" id="s-restante">—</div>
+                <div class="stat-label">Restante</div>
+            </div>
+            <div class="stat">
+                <div class="stat-value" id="s-cargadas">—</div>
+                <div class="stat-label">Cargadas</div>
+            </div>
+        </div>
+        <div class="field">
+            <label>Observaciones</label>
+            <textarea id="obs" placeholder="Daños, faltantes..."></textarea>
+        </div>
+    </div>
+    <div class="footer">
+        <div class="action-buttons">
+            <button class="btn btn-excel" onclick="exportExcel()">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm4 18H6V4h7v5h5v11z"/></svg> Excel
+            </button>
+            <button class="btn btn-pdf" onclick="exportPDF()">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M20 2H8c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-8.5 7.5c0 .83-.67 1.5-1.5 1.5H9v2H7.5V7H10c.83 0 1.5.67 1.5 1.5v1zm5 2c0 .83-.67 1.5-1.5 1.5h-2.5V7H15c.83 0 1.5.67 1.5 1.5v3zm4-3H19v1h1.5V11H19v2h-1.5V7h3v1.5zM9 9.5h1v-1H9v1zM4 6H2v14c0 1.1.9 2 2 2h14v-2H4V6zm10 5.5h1v-3h-1v3z"/></svg> PDF
+            </button>
+        </div>
+        <button class="btn btn-clear" onclick="clearForm()">Limpiar Formulario</button>
+    </div>
+    <div class="tagline">Logística · Control de inventario</div>
+</div>
+
+<script>
+    document.getElementById('fecha').valueAsDate = new Date();
+
+    function getData() {
+        const total = parseInt(document.getElementById('total').value) || 0;
+        const descargadas = parseInt(document.getElementById('descargadas').value) || 0;
+        const cargadas = parseInt(document.getElementById('cargadas').value) || 0;
+        
+        return {
+            origen: document.getElementById('origen').value.trim(),
+            destino: document.getElementById('destino').value.trim(),
+            fecha: document.getElementById('fecha').value,
+            total,
+            descargadas,
+            cargadas,
+            restante: total - descargadas - cargadas,
+            obs: document.getElementById('obs').value.trim()
+        };
+    }
+
+    // El resto de tus funciones lógicas se mantienen idénticas
+    function updateSummary() {
+        const d = getData();
+        document.getElementById('s-total').textContent = d.total || '—';
+        document.getElementById('s-cargadas').textContent = d.cargadas || '—';
+        document.getElementById('s-restante').textContent = document.getElementById('total').value ? d.restante : '—';
+        document.getElementById('diff-block').classList.toggle('negative', d.restante < 0);
+    }
+
+    function clearForm() {
+        ['origen','destino','total','descargadas','cargadas','obs'].forEach(id => document.getElementById(id).value = '');
+        document.getElementById('fecha').valueAsDate = new Date();
+        updateSummary();
+    }
+
+    function exportExcel() {
+        const d = getData();
+        if (!d.origen) { alert('Por favor, ingresa el contenedor de origen.'); return; }
+        const rows = [
+            ['TRANSFERENCIA DE CONTENEDOR'], [],
+            ['Contenedor Origen', d.origen], ['Contenedor Destino', d.destino || '—'], ['Fecha', d.fecha], [],
+            ['MOVIMIENTO DE CAJAS'], ['Cajas de origen', d.total], ['Se descargaron', d.descargadas], ['Se cargaron a otro contenedor', d.cargadas], ['Restante en Origen', d.restante], [],
+            ['Observaciones', d.obs || '—']
+        ];
+        const ws = XLSX.utils.aoa_to_sheet(rows);
+        ws['!cols'] = [{ wch: 32 }, { wch: 20 }];
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, 'Registro_Transferencia');
+        XLSX.writeFile(wb, `Contenedor_${d.origen.replace(/\s/g,'_')}_${d.fecha}.xlsx`);
+    }
+
+    function exportPDF() {
+        const d = getData();
+        if (!d.origen) { alert('Por favor, ingresa el contenedor de origen.'); return; }
+        window.print();
+    }
+</script>
+</body>
+</html>
